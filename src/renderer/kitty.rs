@@ -13,18 +13,12 @@ const TARGET_PX: u32 = 48;
 
 pub struct KittyRenderer {
     uploaded: HashSet<u32>,
-    last_id: Option<u32>,
-    last_col: Option<u16>,
-    last_row: Option<u16>,
 }
 
 impl KittyRenderer {
     pub fn new() -> Self {
         Self {
             uploaded: HashSet::new(),
-            last_id: None,
-            last_col: None,
-            last_row: None,
         }
     }
 
@@ -86,8 +80,8 @@ impl KittyRenderer {
         Ok(())
     }
 
-    /// Delete old placement and re-place the animation at (col, row).
-    /// No-op if position and image ID haven't changed.
+    /// Place the animation at (col, row).
+    /// Caller must handle erasing (delete-all once per frame for multi-pet).
     pub fn place(
         &mut self,
         image_id: u32,
@@ -95,23 +89,10 @@ impl KittyRenderer {
         row: u16,
         out: &mut impl Write,
     ) -> Result<()> {
-        if self.last_id == Some(image_id)
-            && self.last_col == Some(col)
-            && self.last_row == Some(row)
-        {
-            return Ok(());
-        }
-
-        // Delete all current placements to avoid ghost images
-        write!(out, "\x1b_Ga=d,d=a,q=2;\x1b\\")?;
         // Position cursor (1-indexed)
         write!(out, "\x1b[{};{}H", row + 1, col + 1)?;
         // Place the animation
         write!(out, "\x1b_Ga=p,i={},q=2;\x1b\\", image_id)?;
-
-        self.last_id = Some(image_id);
-        self.last_col = Some(col);
-        self.last_row = Some(row);
         Ok(())
     }
 
@@ -123,9 +104,6 @@ impl KittyRenderer {
     pub fn on_resize(&mut self) {
         // Terminal cleared its image store on resize; re-upload everything
         self.uploaded.clear();
-        self.last_id = None;
-        self.last_col = None;
-        self.last_row = None;
     }
 }
 

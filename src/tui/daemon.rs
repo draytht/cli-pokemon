@@ -255,9 +255,14 @@ pub async fn run(renderer_kind: RendererKind) -> Result<()> {
 
         save_cursor(&mut out)?;
 
-        // Erase all previous positions first (avoids partial overdraw)
-        for a in &mut actors {
-            a.erase(&mut out, renderer_kind);
+        // Erase all previous positions first (avoids partial overdraw).
+        // Kitty: single delete-all per frame, then place all pets.
+        if renderer_kind == RendererKind::Kitty {
+            kitty.delete_all(&mut out)?;
+        } else {
+            for a in &mut actors {
+                a.erase(&mut out, renderer_kind);
+            }
         }
         // Draw all at new positions
         for a in &mut actors {
